@@ -1,6 +1,7 @@
 # install python dep
 # pyrealsense2
 tf
+numpy==1.24.4
 dynamixel_sdk
 pynput
 setuptools==58.2
