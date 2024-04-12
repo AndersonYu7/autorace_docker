@@ -7,6 +7,7 @@ docker run --rm \
     --privileged \
     --network=host \
     --ipc=host \
+    --runtime nvidia \
     -v /tmp/.Xauthority:/home/"${user}"/.Xauthority \
     -e XAUTHORITY=/home/"${user}"/.Xauthority \
     -e DISPLAY="${DISPLAY}" \
@@ -14,10 +15,11 @@ docker run --rm \
     -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
     -v /etc/timezone:/etc/timezone:ro \
     -v /etc/localtime:/etc/localtime:ro \
-    -v /dev:/dev \
+    --device /dev/video0:/dev/video0 \
     -v "${WS_PATH}":/home/"${user}"/work \
     -it --name "${CONTAINER}" "${DOCKER_HUB_USER}"/"${IMAGE}"
 
 # ${GPU_FLAG} \
 # --runtime nvidia \
+#--user root \ 
 

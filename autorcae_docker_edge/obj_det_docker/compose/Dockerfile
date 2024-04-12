@@ -1,5 +1,4 @@
-# FROM nvcr.io/nvidia/l4t-ml:r36.2.0-py3
-FROM dustynv/ros:humble-desktop-l4t-r35.3.1
+FROM ubuntu:22.04
 ############################## SYSTEM PARAMETERS ##############################
 # * Arguments
 ARG USER=initial
@@ -7,7 +6,7 @@ ARG GROUP=initial
 ARG UID=1000
 ARG GID="${UID}"
 ARG SHELL=/bin/bash
-ARG HARDWARE=arm64
+ARG HARDWARE=x86_64
 ARG ENTRYPOINT_FILE=entrypint.sh
 
 # * Env vars for the nvidia-container-runtime.
@@ -19,23 +18,20 @@ ENV NVIDIA_DRIVER_CAPABILITIES all
 RUN groupadd --gid "${GID}" "${GROUP}" \
     && useradd --gid "${GID}" --uid "${UID}" -ms "${SHELL}" "${USER}" \
     && mkdir -p /etc/sudoers.d \
-    && echo "${USER}:x:${UID}:${UID}:${USER},,,:/home/${USER}:${SHELL}" >> /etc/passwd \
+    && echo "${USER}:x:${UID}:${UID}:${USER},,,:/home/${USER}:${shell}" >> /etc/passwd \
     && echo "${USER}:x:${UID}:" >> /etc/group \
     && echo "${USER} ALL=(ALL) NOPASSWD: ALL" > "/etc/sudoers.d/${USER}" \
     && chmod 0440 "/etc/sudoers.d/${USER}"
 
 # * Replace apt urls
 # ? Change to tku
-# RUN sed -i 's@archive.ubuntu.com@ftp.tku.edu.tw@g' /etc/apt/sources.list
+RUN sed -i 's@archive.ubuntu.com@ftp.tku.edu.tw@g' /etc/apt/sources.list
 # ? Change to Taiwan
-RUN sed -i 's@archive.ubuntu.com@tw.archive.ubuntu.com@g' /etc/apt/sources.list
+# RUN sed -i 's@archive.ubuntu.com@tw.archive.ubuntu.com@g' /etc/apt/sources.list
 
 # * Time zone
-# RUN apt update && apt install -y tzdata
 ENV TZ=Asia/Taipei
 RUN ln -snf /usr/share/zoneinfo/"${TZ}" /etc/localtime && echo "${TZ}" > /etc/timezone
-# RUN DEBIAN_FRONTEND=noninteractive TZ=Asia/Taipei apt-get -y install tzdata
-# RUN apt install tzdata -y
 
 # * Copy custom configuration
 # ? Requires docker version >= 17.09
@@ -48,6 +44,7 @@ COPY --chown="${USER}":"${GROUP}" --chmod=0775 config config
     # sudo chown -R "${USER}":"${GROUP}" config \
     # && sudo chmod -R 0775 config
 
+############################### INSTALL #######################################
 # * Install packages
 RUN apt update \
     && apt install -y --no-install-recommends \
@@ -59,24 +56,19 @@ RUN apt update \
         psmisc \
         # * Shell
         tmux \
-        udev \
         terminator \
         # * base tools
         python3-pip \
         python3-dev \
         python3-setuptools \
-        software-properties-common \
-        lsb-release \
         # * Work tools
-        xvfb \
-        ffmpeg \ 
-        freeglut3-dev \
-        # camera 
-        qv4l2 \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN ./config/pip/pip_setup.sh
+# gnome-terminal libcanberra-gtk-module libcanberra-gtk3-module \
+# dbus-x11 libglvnd0 libgl1 libglx0 libegl1 libxext6 libx11-6 \
+# display dep
+# libnss3 libgbm1 libxshmfence1 libdrm2 libx11-xcb1 libxcb-*-dev
 
 ############################## USER CONFIG ####################################
 # * Switch user to ${USER}
@@ -85,13 +77,8 @@ USER ${USER}
 RUN ./config/shell/bash_setup.sh "${USER}" "${GROUP}" \
     && ./config/shell/terminator/terminator_setup.sh "${USER}" "${GROUP}" \
     && ./config/shell/tmux/tmux_setup.sh "${USER}" "${GROUP}" \
+    && ./config/pip/pip_setup.sh \
     && sudo rm -rf /config
-RUN export CXX=g++
-RUN export MAKEFLAGS="-j nproc"
-RUN echo "source /opt/ros/humble/install/setup.bash" >> ~/.bashrc
-RUN echo "export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp" >> ~/.bashrc
-RUN echo "set-option -g mouse on" >  ~/.tmux.conf
-
 
 # * Switch workspace to ~/work
 RUN sudo mkdir -p /home/"${USER}"/work
